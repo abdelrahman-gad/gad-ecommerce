@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
+use App\Mail\OrderPlaced;
+use Illuminate\Support\Facades\Mail;
 use Gloudemans\Shoppingcart\Facades\Cart;
 use Stripe\Stripe;
 use Stripe\Customer;
 use Stripe\Charge;
+use App\Order;
+use App\OrderProduct;
 class CheckoutController extends Controller
 {
     /**
@@ -17,6 +20,13 @@ class CheckoutController extends Controller
      */
     public function index()
     {
+        if (Cart::instance('default')->count() == 0) {
+            return redirect()->route('shop.index');
+        }
+
+        if (auth()->user() && request()->is('guestCheckout')) {
+            return redirect()->route('checkout.index');
+        }
         return view('checkout')->with([
             'discount' => getNumbers()->get('discount'),
             'newSubtotal' => getNumbers()->get('newSubtotal'),
@@ -43,28 +53,30 @@ class CheckoutController extends Controller
      */
     public function store(Request $request)
     {
-        $contents = Cart::content()->map(function ($item) {
-            return $item->model->slug.', '.$item->qty;
-        })->values()->toJson();
+        // $contents = Cart::content()->map(function ($item) {
+        //     return $item->model->slug.', '.$item->qty;
+        // })->values()->toJson();
 
      try{
-        Stripe::setApiKey(env('STRIPE_SECRET'));
-        $customer = Customer::create([
-            'email' => $request->stripeEmail,
-            'source'  => $request->stripeToken
-        ]);
-         $charge=Charge::create(
-             [
-                 'amount'=>Cart::total(),
-                 'currency'=>'CAD',
-                 'description'=>'Order',
-                 'metadata'=>[
-                     'contents'=>$contents,
-                     'quantity'=>Cart::instance('default')->count()
-                 ]
+        // Stripe::setApiKey(env('STRIPE_SECRET'));
+        // $customer = Customer::create([
+        //     'email' => $request->stripeEmail,
+        //     'source'  => $request->stripeToken
+        // ]);
+        //  $charge=Charge::create(
+        //      [
+        //          'amount'=>Cart::total(),
+        //          'currency'=>'CAD',
+        //          'description'=>'Order',
+        //          'metadata'=>[
+        //              'contents'=>$contents,
+        //              'quantity'=>Cart::instance('default')->count()
+        //          ]
 
-             ]
-         );
+        //      ]
+        //  );
+        $order =  $this-> addToOrdersTables($request,null);
+         Mail::send(new OrderPlaced($order));
          return redirect()->route('confirmation.index')->with('success_message', 'Thank you! Your payment has been successfully accepted!');
 
 
@@ -118,5 +130,38 @@ class CheckoutController extends Controller
     public function destroy($id)
     {
         //
+    }
+    
+    protected function addToOrdersTables($request, $error)
+    {
+        // Insert into orders table
+        $order = Order::create([
+            'user_id' => auth()->user() ? auth()->user()->id : null,
+            'billing_email' => $request->email,
+            'billing_name' => $request->name,
+            'billing_address' => $request->address,
+            'billing_city' => $request->city,
+            'billing_province' => $request->province,
+            'billing_postalcode' => $request->postalcode,
+            'billing_phone' => $request->phone,
+            'billing_name_on_card' => $request->name_on_card,
+            'billing_discount' => getNumbers()->get('discount'),
+            'billing_discount_code' => getNumbers()->get('code'),
+            'billing_subtotal' => getNumbers()->get('newSubtotal'),
+            'billing_tax' => getNumbers()->get('newTax'),
+            'billing_total' => getNumbers()->get('newTotal'),
+            'error' => $error,
+        ]);
+
+        // Insert into order_product table
+        foreach (Cart::content() as $item) {
+            OrderProduct::create([
+                'order_id' => $order->id,
+                'product_id' => $item->model->id,
+                'quantity' => $item->qty,
+            ]);
+        }
+
+        return $order;
     }
 }
