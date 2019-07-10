@@ -16,6 +16,10 @@ Route::get('/', 'LandingPageController@index')->name('landing-page');
 Route::get('/shop','ShopController@index')->name('shop.index');
 Route::get('/shop/{product}', 'ShopController@show')->name('shop.show');
 
+// search method
+
+Route::get('/search','ShopController@search')->name('search');
+Route::get('/search-algolia', 'ShopController@searchAlgolia')->name('search-algolia');
 
 
 // cart routes

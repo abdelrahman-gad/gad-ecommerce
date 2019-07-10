@@ -6,9 +6,9 @@
     </svg>
 </div>
 
-<form action="https://laravelecommerceexample.ca/search" method="GET" class="search-form">
+<form action="{{route('search')}}" method="GET" class="search-form">
     <i class="fa fa-search search-icon"></i>
-    <input type="text" name="query" id="query" value="" class="search-box" placeholder="Search for product" required>
+    <input type="text" name="query" id="query" value="{{request()->input('query')}}" class="search-box" placeholder="Search for product" required>
 </form>
         </div>
     </div>
