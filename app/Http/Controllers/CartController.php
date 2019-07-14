@@ -90,7 +90,12 @@ class CartController extends Controller
             session()->flash('errors', collect(['Quantity must be between 1 and 5.']));
             return response()->json(['success' => false], 400);
         }
-        
+
+        if ($request->quantity > $request->productQuantity) {
+            session()->flash('errors', collect(['We currently do not have enough items in stock.']));
+            return response()->json(['success' => false], 400);
+        }
+
         Cart::update($id, $request->quantity);
         session()->flash('success_message', 'Quantity was updated successfully!');
         return response()->json(['success' => true]);
@@ -134,5 +139,25 @@ class CartController extends Controller
             ->associate('App\Product');
 
         return redirect()->route('cart.index')->with('success_message', 'Item has been Saved For Later!');
+    }
+    protected function decreaseQuantities()
+    {
+        foreach (Cart::content() as $item) {
+            $product = Product::find($item->model->id);
+
+            $product->update(['quantity' => $product->quantity - $item->qty]);
+        }
+    }
+
+    protected function productsAreNoLongerAvailable()
+    {
+        foreach (Cart::content() as $item) {
+            $product = Product::find($item->model->id);
+            if ($product->quantity < $item->qty) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
