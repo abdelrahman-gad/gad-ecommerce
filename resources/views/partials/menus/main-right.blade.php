@@ -4,7 +4,7 @@
     <li><a href="{{ route('login') }}">Login</a></li>
     @else
     <li>
-        <a href="#">My Account</a>
+        <a href=" {{route('users.edit')}} ">My Account</a>
     </li>
     <li>
         <a href="{{ route('logout') }}"
