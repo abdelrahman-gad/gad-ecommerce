@@ -6,6 +6,10 @@ function presentPrice($price)
 {
     return '$'.$price/100;
 }
+function presentDate($date)
+{
+    return Carbon::parse($date)->format('M d, Y');
+}
 function setActiveCategory($category, $output = 'active')
 {
     return request()->category == $category ? $output : '';
